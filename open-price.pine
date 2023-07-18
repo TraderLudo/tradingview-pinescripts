@@ -1,0 +1,113 @@
+// ©TraderLudo
+
+//@version=5
+indicator(title="Open price @TraderLudo", overlay=true)
+
+// ##########
+// # INPUTS #
+// ##########
+var groupGlobalSettings = "Global settings"
+maxTimeframe            = input.int    (61, "Hide indicator above specified minutes", group=groupGlobalSettings)
+displayDaily            = input.bool   (true, "Display Daily open", group=groupGlobalSettings)
+displayWeekly           = input.bool   (true, "Display Weekly open", group=groupGlobalSettings)
+displayMonthly          = input.bool   (false, "Display Monthly open", group=groupGlobalSettings)
+
+var groupStyleSettings  = "Style settings"
+inputColor              = input.color  (color.rgb(0,0,0,50), "Color", group=groupStyleSettings)
+inputStyle              = input.string ("dashed (╌)", "Style", ["solid (-)", "dotted (┈)", "dashed (╌)"], group=groupStyleSettings)
+
+// #########
+// # UTILS #
+// #########
+convertTxtToStyle(txt) =>
+    style = txt == "solid (-)" ? line.style_solid : txt == "dotted (┈)" ? line.style_dotted : txt == "dashed (╌)" ? line.style_dashed : line.style_solid
+    style
+
+getWeeklyStartOffset() =>
+    ms = 25200000 // 7h in ms
+    if syminfo.type == "crypto"
+        ms := 0
+    ms
+
+// #############
+// # CONSTANTS #
+// #############
+timeMidnight      = time("1", "0000-0001:1234567", "America/New_York")
+midnightOpenTime  = timestamp("America/New_York", year, month, dayofmonth, 0, 0, 0)
+endOfDayTime      = timestamp("America/New_York", year, month, dayofmonth, 23, 59, 59)
+
+lineStyle         = convertTxtToStyle(inputStyle)
+displayIndicator  = timeframe.multiplier <= maxTimeframe and timeframe.isintraday and barstate.isconfirmed
+
+newWeek           = ta.change(weekofyear)
+newMonth          = ta.change(time("M"))
+openWeekly        = request.security(syminfo.tickerid, "W", open, lookahead = barmerge.lookahead_on)
+openMonthly       = request.security(syminfo.tickerid, "M", open, lookahead = barmerge.lookahead_on)
+
+// ########
+// # MAIN #
+// ########
+// Daily
+var openMidnight   = 0.0
+var label t = na
+var line l = na
+
+// Weekly
+var weeklyOpenTime = time
+var monthlyOpenTime = time
+
+var label tWeekly = na
+var line lWeekly = na
+
+var label tMonthly = na
+var line lMonthly = na
+
+if timeMidnight
+    if not timeMidnight[1]
+        openMidnight  := open
+    else
+        openMidnight := math.max(open, openMidnight)
+
+if newWeek
+    weeklyOpenTime := time
+if newMonth
+    monthlyOpenTime := time
+
+if displayIndicator
+    if (syminfo.type != "crypto" and dayofweek != dayofweek.sunday) or (syminfo.type == "crypto")
+        if displayDaily
+            label.delete(t[1])
+            line.delete(l[1])
+
+        if displayWeekly
+            label.delete(tWeekly[1])
+            line.delete(lWeekly[1])
+
+        if displayMonthly
+            label.delete(tMonthly[1])
+            line.delete(lMonthly[1])
+
+        if syminfo.type != "crypto" and dayofweek == dayofweek.friday
+            if displayDaily
+                t := label.new(x=endOfDayTime, y=openMidnight, xloc=xloc.bar_time, text="00:00", color=color.rgb(0,0,0,100), textcolor=inputColor, style=label.style_label_left, size=size.normal, tooltip="Midnight Opening Price " + str.tostring(openMidnight))
+                l := line.new(x1=midnightOpenTime, y1=openMidnight, x2=endOfDayTime, y2=openMidnight, xloc=xloc.bar_time, color=inputColor, style=lineStyle, width=1)
+
+            if displayWeekly
+                tWeekly := label.new(x=endOfDayTime, y=openWeekly, xloc=xloc.bar_time, text="Weekly open", color=color.rgb(0,0,0,100), textcolor=inputColor, style=label.style_label_left, size=size.normal, tooltip="Weekly Opening Price " + str.tostring(openWeekly))
+                lWeekly := line.new(x1=weeklyOpenTime-getWeeklyStartOffset(), y1=openWeekly, x2=endOfDayTime, y2=openWeekly, xloc=xloc.bar_time, color=inputColor, style=lineStyle, width=1)
+
+            if displayMonthly
+                tMonthly := label.new(x=endOfDayTime, y=openMonthly, xloc=xloc.bar_time, text="Monthly open", color=color.rgb(0,0,0,100), textcolor=inputColor, style=label.style_label_left, size=size.normal, tooltip="Monthly Opening Price " + str.tostring(openMonthly))
+                lMonthly := line.new(x1=monthlyOpenTime, y1=openMonthly, x2=endOfDayTime, y2=openMonthly, xloc=xloc.bar_time, color=inputColor, style=lineStyle, width=1)
+        else
+            if displayDaily
+                t := label.new(x=endOfDayTime, y=openMidnight, xloc=xloc.bar_time, text="00:00", color=color.rgb(0,0,0,100), textcolor=inputColor, style=label.style_label_left, size=size.normal, tooltip="Midnight Opening Price " + str.tostring(openMidnight))
+                l := line.new(x1=midnightOpenTime, y1=openMidnight, x2=endOfDayTime, y2=openMidnight, xloc=xloc.bar_time, color=inputColor, style=lineStyle, width=1)
+
+            if displayWeekly
+                tWeekly := label.new(x=endOfDayTime, y=openWeekly, xloc=xloc.bar_time, text="Weekly open", color=color.rgb(0,0,0,100), textcolor=inputColor, style=label.style_label_left, size=size.normal, tooltip="Weekly Opening Price " + str.tostring(openWeekly))
+                lWeekly := line.new(x1=weeklyOpenTime-getWeeklyStartOffset(), y1=openWeekly, x2=endOfDayTime, y2=openWeekly, xloc=xloc.bar_time, color=inputColor, style=lineStyle, width=1)
+
+            if displayMonthly
+                tMonthly := label.new(x=endOfDayTime, y=openMonthly, xloc=xloc.bar_time, text="Monthly open", color=color.rgb(0,0,0,100), textcolor=inputColor, style=label.style_label_left, size=size.normal, tooltip="Monthly Opening Price " + str.tostring(openMonthly))
+                lMonthly := line.new(x1=monthlyOpenTime, y1=openMonthly, x2=endOfDayTime, y2=openMonthly, xloc=xloc.bar_time, color=inputColor, style=lineStyle, width=1)
