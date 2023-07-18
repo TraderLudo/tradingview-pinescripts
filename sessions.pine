@@ -1,0 +1,120 @@
+// @TraderLudo
+
+//@version=5
+indicator(title="Sessions @TraderLudo", overlay=true)
+
+// ##########
+// # INPUTS #
+// ##########
+var groupGlobalSettings  = "Global settings"
+inputDisplay             = input.string("range", "Display", ["background", "range"], group=groupGlobalSettings)
+maxTimeframe             = input.int   (61, "Hide indicator above specified minutes", group=groupGlobalSettings)
+
+var groupForexSettings   = "Forex settings"
+inputAsian               = input(true, "Asian", inline="asian", group=groupForexSettings)
+inputAsianColor          = input(color.new(color.yellow, 90), "", inline="asian", group=groupForexSettings)
+inputLondon              = input(true, "London", inline="london", group=groupForexSettings)
+inputLondonColor         = input(color.new(color.aqua, 90), "", inline="london", group=groupForexSettings)
+inputNewYork             = input(true, "New York", inline="newyork", group=groupForexSettings)
+inputNewYorkColor        = input(color.new(color.red, 90), "", inline="newyork", group=groupForexSettings)
+inputLondonClose         = input(true, "London Close", inline="londonclose", group=groupForexSettings)
+inputLondonCloseColor    = input(color.new(color.gray, 90), "", inline="londonclose", group=groupForexSettings)
+
+var groupIndicesSettings = "Indices settings"
+inputAM                  = input(true, "AM Session", inline="am", group=groupIndicesSettings)
+inputAMColor             = input(color.new(color.aqua, 90), "", inline="am", group=groupIndicesSettings)
+inputPM                  = input(true, "PM Session", inline="pm", group=groupIndicesSettings)
+inputPMColor             = input(color.new(color.red, 90), "", inline="pm", group=groupIndicesSettings)
+
+// #########
+// # UTILS #
+// #########
+timeInRange(res, sess) => time(res, sess, "America/New_York") != 0
+
+openBarSess(sess) =>
+    t = time('D', sess, "America/New_York")
+    na(t[1]) and not na(t) or t[1] < t
+isOpenSess(sess) =>
+    not na(time(timeframe.period, sess, "America/New_York"))
+
+isIndexForex(ticker) =>
+    str.contains(ticker, "DXY") or str.contains(ticker, "CME:6A") or str.contains(ticker, "CME:6B") or str.contains(ticker, "CME:6C") or str.contains(ticker, "CME:6E") or str.contains(ticker, "CME:6J") or str.contains(ticker, "CME:6J") or str.contains(ticker, "CME:6S")
+
+getHighLowSess(sess) =>
+    openBar = openBarSess(sess)
+    isOpen = isOpenSess(sess)
+    sessLow = float(na)
+    sessLow := isOpen ? openBar ? low : math.min(sessLow[1], low) : sessLow[1]
+    sessHigh = float(na)
+    sessHigh := isOpen ? openBar ? high : math.max(sessHigh[1], high) : sessHigh[1]
+    array.from(sessHigh, sessLow)
+
+// #############
+// # CONSTANTS #
+// #############
+colorWhiteTransparent = color.new(color.white, 100)
+
+ASIAN_HOURS = '1900-0000:1234567'
+LONDON_HOURS = '0200-0500:1234567'
+NEW_YORK_HOURS = '0700-0900:1234567'
+LONDON_CLOSE_HOURS = '1000-1200:1234567'
+
+AM_HOURS = '0930-1200:1234567'
+PM_HOURS = '1300-1600:1234567'
+
+isForex = syminfo.type == "forex" or isIndexForex(ticker.standard(syminfo.tickerid))
+isIndices = (syminfo.type == "futures" or syminfo.type == "index") and not isIndexForex(ticker.standard(syminfo.tickerid))
+
+displayBackgroundForex = inputDisplay == 'background' and timeframe.multiplier <= maxTimeframe and isForex and timeframe.isintraday
+displayRangeForex = inputDisplay == 'range' and timeframe.multiplier <= maxTimeframe and isForex and timeframe.isintraday
+
+displayBackgroundIndices = inputDisplay == 'background' and timeframe.multiplier <= maxTimeframe and isIndices and timeframe.isintraday
+displayRangeIndices = inputDisplay == 'range' and timeframe.multiplier <= maxTimeframe and isIndices and timeframe.isintraday
+
+midnightOpenTime  = timestamp("America/New_York", year, month, dayofmonth, 0, 0, 0)
+
+// ########
+// # MAIN #
+// ########
+
+// Forex - background
+bgcolor(timeInRange("1", ASIAN_HOURS) and displayBackgroundForex and inputAsian ? inputAsianColor : na)
+bgcolor(timeInRange("1", LONDON_HOURS) and displayBackgroundForex and inputLondon? inputLondonColor : na)
+bgcolor(timeInRange("1", NEW_YORK_HOURS) and displayBackgroundForex and inputNewYork ? inputNewYorkColor : na)
+bgcolor(timeInRange("1", LONDON_CLOSE_HOURS) and displayBackgroundForex and inputLondonClose ? inputLondonCloseColor : na)
+
+// Indices - background
+bgcolor(timeInRange("1", AM_HOURS) and displayBackgroundIndices and inputAM ? inputAMColor : na)
+bgcolor(timeInRange("1", PM_HOURS) and displayBackgroundIndices and inputPM ? inputPMColor : na)
+
+// Forex - range
+sessionHLAsian = getHighLowSess(ASIAN_HOURS)
+asianOpenRangeHigh = plot(timeInRange(timeframe.period, ASIAN_HOURS) and displayRangeForex and inputAsian ? array.get(sessionHLAsian, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+asianOpenRangeLow = plot(timeInRange(timeframe.period, ASIAN_HOURS) and displayRangeForex and inputAsian ? array.get(sessionHLAsian, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+fill(asianOpenRangeHigh, asianOpenRangeLow, color=displayRangeForex and inputAsian ? inputAsianColor : na, editable=false)
+
+sessionHLLondon = getHighLowSess(LONDON_HOURS)
+londonOpenRangeHigh = plot(timeInRange(timeframe.period, LONDON_HOURS) and displayRangeForex and inputLondon ? array.get(sessionHLLondon, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+londonOpenRangeLow = plot(timeInRange(timeframe.period, LONDON_HOURS) and displayRangeForex and inputLondon ? array.get(sessionHLLondon, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+fill(londonOpenRangeHigh, londonOpenRangeLow, color=displayRangeForex and inputLondon ? inputLondonColor : na, editable=false)
+
+sessionHLNY = getHighLowSess(NEW_YORK_HOURS)
+nyOpenRangeHigh = plot(timeInRange(timeframe.period, NEW_YORK_HOURS) and displayRangeForex and inputNewYork ? array.get(sessionHLNY, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+nyOpenRangeLow = plot(timeInRange(timeframe.period, NEW_YORK_HOURS) and displayRangeForex and inputNewYork ? array.get(sessionHLNY, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+fill(nyOpenRangeHigh, nyOpenRangeLow, color=displayRangeForex and inputNewYork ? inputNewYorkColor : na, editable=false)
+
+sessionHLC = getHighLowSess(LONDON_CLOSE_HOURS)
+lcOpenRangeHigh = plot(timeInRange(timeframe.period, LONDON_CLOSE_HOURS) and displayRangeForex and inputLondonClose ? array.get(sessionHLC, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+lcOpenRangeLow = plot(timeInRange(timeframe.period, LONDON_CLOSE_HOURS) and displayRangeForex and inputLondonClose ? array.get(sessionHLC, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+fill(lcOpenRangeHigh, lcOpenRangeLow, color=displayRangeForex and inputLondonClose ? inputLondonCloseColor : na, editable=false)
+
+// Indices - range
+sessionAM = getHighLowSess(AM_HOURS)
+amOpenRangeHigh = plot(timeInRange(timeframe.period, AM_HOURS) and displayRangeIndices and inputAM ? array.get(sessionAM, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+amOpenRangeLow = plot(timeInRange(timeframe.period, AM_HOURS) and displayRangeIndices and inputAM ? array.get(sessionAM, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+fill(amOpenRangeHigh, amOpenRangeLow, color=displayRangeIndices and inputAM ? inputAMColor : na, editable=false)
+
+sessionPM = getHighLowSess(PM_HOURS)
+pmOpenRangeHigh = plot(timeInRange(timeframe.period, PM_HOURS) and displayRangeIndices and inputPM ? array.get(sessionPM, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+pmOpenRangeLow = plot(timeInRange(timeframe.period, PM_HOURS) and displayRangeIndices and inputPM ? array.get(sessionPM, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+fill(pmOpenRangeHigh, pmOpenRangeLow, color=displayRangeIndices and inputPM ? inputPMColor : na, editable=false)
