@@ -1,0 +1,131 @@
+// ©TraderLudo
+
+//@version=5
+indicator(title="Liquidity @TraderLudo", overlay=true)
+
+// ##########
+// # INPUTS #
+// ##########
+var groupMonthlySettings = "Monthly settings"
+maxMonthlyTimeframe     = input.int    (1441, "Hide PML/PMH above specified minutes", group=groupMonthlySettings)
+displayMonthly          = input.bool   (true, "Display PML/PMH")
+
+var groupWeeklySettings = "Weekly settings"
+maxWeeklyTimeframe      = input.int    (1441, "Hide PWL/PWH above specified minutes", group=groupWeeklySettings)
+displayWeekly           = input.bool   (true, "Display PWL/PWH")
+
+var groupDailySettings = "Daily settings"
+maxDailyTimeframe       = input.int    (1441, "Hide PDL/PDH above specified minutes", group=groupDailySettings)
+displayDaily            = input.bool   (true, "Display PDL/PDH")
+
+var groupStyleSettings  = "Style settings"
+inputColor              = input.color  (color.rgb(0,0,0,50), "Color", group=groupStyleSettings)
+inputStyle              = input.string ("solid (-)", "Style", ["solid (-)", "dotted (┈)", "dashed (╌)"], group=groupStyleSettings)
+inputSize               = input.string ("normal", "Size", ["auto", "tiny", "small", "normal", "large", "huge"], group=groupStyleSettings)
+
+// #########
+// # UTILS #
+// #########
+convertTxtToStyle(txt) =>
+    style = txt == "solid (-)" ? line.style_solid : txt == "dotted (┈)" ? line.style_dotted : txt == "dashed (╌)" ? line.style_dashed : line.style_solid
+    style
+
+convertTxtToSize(txt) =>
+    size = txt == "auto" ? size.auto : txt == "tiny" ? size.tiny : txt == "small" ? size.small : txt == "normal" ? size.normal : txt == "large" ? size.large : txt == "huge" ? size.huge : size.normal
+    size
+
+cleanOldDrawings(days, midnightOpenTime) =>
+    removeBefore = midnightOpenTime - (days * 86400000)
+    allLines = line.all
+    allLabels = label.all
+    if array.size(allLines) > 0
+	    for i = 0 to array.size(allLines) - 1
+		    line_x2 = line.get_x2(array.get(allLines, i))
+		    if line_x2 < removeBefore
+		        line.delete(array.get(allLines, i))
+
+// #############
+// # CONSTANTS #
+// #############
+midnightOpenTime  = timestamp("America/New_York", year, month, dayofmonth, 0, 0, 0)
+
+lineStyle         = convertTxtToStyle(inputStyle)
+labelSize         = convertTxtToSize(inputSize)
+
+dh = request.security(syminfo.tickerid, "D", high[0], barmerge.gaps_off, barmerge.lookahead_on)
+dl = request.security(syminfo.tickerid, "D", low[0], barmerge.gaps_off, barmerge.lookahead_on)
+pdh = request.security(syminfo.tickerid, "D", high[1], barmerge.gaps_off, barmerge.lookahead_on)
+pdl = request.security(syminfo.tickerid, "D", low[1], barmerge.gaps_off, barmerge.lookahead_on)
+
+wh = request.security(syminfo.tickerid, "W", high[0], barmerge.gaps_off, barmerge.lookahead_on)
+wl = request.security(syminfo.tickerid, "W", low[0], barmerge.gaps_off, barmerge.lookahead_on)
+pwh = request.security(syminfo.tickerid, "W", high[1], barmerge.gaps_off, barmerge.lookahead_on)
+pwl = request.security(syminfo.tickerid, "W", low[1], barmerge.gaps_off, barmerge.lookahead_on)
+
+mh = request.security(syminfo.tickerid, "M", high[0], barmerge.gaps_off, barmerge.lookahead_on)
+ml = request.security(syminfo.tickerid, "M", low[0], barmerge.gaps_off, barmerge.lookahead_on)
+pmh = request.security(syminfo.tickerid, "M", high[1], barmerge.gaps_off, barmerge.lookahead_on)
+pml = request.security(syminfo.tickerid, "M", low[1], barmerge.gaps_off, barmerge.lookahead_on)
+
+//barstate.isconfirmed
+displayPD  = displayDaily and timeframe.multiplier <= maxDailyTimeframe and timeframe.isintraday
+displayPW  = displayWeekly and timeframe.multiplier <= maxWeeklyTimeframe and timeframe.isintraday
+displayPM  = displayMonthly and timeframe.multiplier <= maxMonthlyTimeframe and timeframe.isintraday
+
+// ########
+// # MAIN #
+// ########
+var addToMidnight = 86400000
+if syminfo.type != "crypto" and dayofweek == dayofweek.friday
+    addToMidnight := 259200000
+else
+    addToMidnight := 86400000
+
+varip float[] prices = array.new_float(0)
+varip string[] pricesText = array.new_string(0)
+
+// TMP
+updateArrays(price, txt) =>
+    var found = false
+    for i = 0 to (array.size(prices) == 0 ? na : array.size(prices) - 1)
+        if price == array.get(prices, i) // ALREADY EXISTS WE DON'T ADD IT
+            if str.contains(array.get(pricesText, i), txt) == false
+                array.set(pricesText, i, array.get(pricesText, i) + " + " + txt)
+            found := true
+    if found == false
+        array.push(prices, price)
+        array.push(pricesText, txt)
+
+var line line1 = na
+var line line2 = na
+var line line3 = na
+var line line4 = na
+
+if barstate.islast and timeframe.isintraday
+    array.clear(prices)
+    array.clear(pricesText)
+
+    allLines = line.all
+    allLabels = label.all
+    for i = 0 to (array.size(allLines) == 0 ? na : array.size(allLines) - 1)
+        line.delete(array.get(allLines, i))
+    for i = 0 to (array.size(allLabels) == 0 ? na : array.size(allLabels) - 1)
+        label.delete(array.get(allLabels, i))
+
+    if dh < pdh and displayPD
+        updateArrays(pdh, "PDH")
+    if wh < pwh and displayPW
+        updateArrays(pwh, "PWH")
+    if mh < pmh and displayPM
+        updateArrays(pmh, "PMH")
+
+    if dl > pdl and displayPD
+        updateArrays(pdl, "PDL")
+    if wl > pwl and displayPW
+        updateArrays(pwl, "PWL")
+    if ml > pml and displayPM
+        updateArrays(pml, "PML")
+
+    for i = 0 to (array.size(prices) == 0 ? na : array.size(prices) - 1)
+        line.new(x1=midnightOpenTime, y1=array.get(prices, i), x2=midnightOpenTime+addToMidnight, y2=array.get(prices, i), xloc=xloc.bar_time, color=inputColor, style=lineStyle, width=1)
+        label.new(x=midnightOpenTime+addToMidnight, y=array.get(prices, i), xloc=xloc.bar_time, text=array.get(pricesText, i), color=color.rgb(0,0,0,100), textcolor=inputColor, style=label.style_label_left, size=labelSize, tooltip="Previous Daily High")
