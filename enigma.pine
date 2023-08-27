@@ -16,6 +16,7 @@ var groupIndicators       = "Indicators"
 showWeekdaySeparator      = input.bool   (true, "Show Weekday Separator", group=groupIndicators)
 showSessions              = input.bool   (true, "Show Sessions", group=groupIndicators)
 showOpens                 = input.bool   (true, "Show Opens", group=groupIndicators)
+showLiquidity             = input.bool   (true, "Show Liquidity", group=groupIndicators)
 
 // #########
 // # UTILS #
@@ -62,17 +63,33 @@ getHighLowSess(sess) =>
     sessHigh := isOpen ? openBar ? high : math.max(sessHigh[1], high) : sessHigh[1]
     array.from(sessHigh, sessLow)
 
+varip float[] liquidityLines = array.new_float(0)
+varip string[] liquidityTexts = array.new_string(0)
+updateLiquidityArrays(price, txt) =>
+    var found = false
+    for i = 0 to (array.size(liquidityLines) == 0 ? na : array.size(liquidityLines) - 1)
+        if price == array.get(liquidityLines, i) // ALREADY EXISTS WE DON'T ADD IT
+            if str.contains(array.get(liquidityTexts, i), txt) == false
+                array.set(liquidityTexts, i, array.get(liquidityTexts, i) + " + " + txt)
+            found := true
+    if found == false
+        array.push(liquidityLines, price)
+        array.push(liquidityTexts, txt)
+
 // #############
 // # CONSTANTS #
 // #############
 timeMidnight      = time("1", "0000-0001:1234567", "America/New_York")
 timeLondonQ2      = time("1", "0130-0131:1234567", "America/New_York")
 timeAMQ2          = time("1", "0730-0731:1234567", "America/New_York")
+timePMQ2          = time("1", "1330-1331:1234567", "America/New_York")
 midnightOpenTime  = timestamp("America/New_York", year, month, dayofmonth, 0, 0, 0)
 londonOpenTime    = timestamp("America/New_York", year, month, dayofmonth, 1, 30, 0)
 amTime            = timestamp("America/New_York", year, month, dayofmonth, 6, 00, 0)
 amOpenTime        = timestamp("America/New_York", year, month, dayofmonth, 7, 30, 0)
 pmTime            = timestamp("America/New_York", year, month, dayofmonth, 12, 00, 0)
+pmOpenTime        = timestamp("America/New_York", year, month, dayofmonth, 13, 30, 0)
+asianTime         = timestamp("America/New_York", year, month, dayofmonth, 18, 00, 0)
 
 currentTime             = timestamp("America/New_York", year, month, dayofmonth, hour, minute, second)
 currentTimePlusTwoHours = currentTime + 3600 * 2 * 1000
@@ -84,6 +101,11 @@ time0600 = timestamp("America/New_York", year, month, dayofmonth, 6, 00, 0)
 time0730 = timestamp("America/New_York", year, month, dayofmonth, 7, 30, 0)
 time0900 = timestamp("America/New_York", year, month, dayofmonth, 9, 0, 0)
 time1030 = timestamp("America/New_York", year, month, dayofmonth, 10, 30, 0)
+
+// PM Q2,Q3,Q4
+time1330 = timestamp("America/New_York", year, month, dayofmonth, 13, 30, 0)
+time1500 = timestamp("America/New_York", year, month, dayofmonth, 15, 00, 0)
+time1630 = timestamp("America/New_York", year, month, dayofmonth, 16, 30, 0)
 
 newDay            = ta.change(dayofweek)
 newWeek           = ta.change(weekofyear)
@@ -141,6 +163,26 @@ openColor     = color.rgb(0,0,0,50)
 openLine      = "dashed (╌)"
 openLineStyle = convertTxtToStyle(openLine)
 
+// # Constants for Liquidity
+dh = request.security(syminfo.tickerid, "D", high[0], barmerge.gaps_off, barmerge.lookahead_on)
+dl = request.security(syminfo.tickerid, "D", low[0], barmerge.gaps_off, barmerge.lookahead_on)
+pdh = request.security(syminfo.tickerid, "D", high[1], barmerge.gaps_off, barmerge.lookahead_on)
+pdl = request.security(syminfo.tickerid, "D", low[1], barmerge.gaps_off, barmerge.lookahead_on)
+
+wh = request.security(syminfo.tickerid, "W", high[0], barmerge.gaps_off, barmerge.lookahead_on)
+wl = request.security(syminfo.tickerid, "W", low[0], barmerge.gaps_off, barmerge.lookahead_on)
+pwh = request.security(syminfo.tickerid, "W", high[1], barmerge.gaps_off, barmerge.lookahead_on)
+pwl = request.security(syminfo.tickerid, "W", low[1], barmerge.gaps_off, barmerge.lookahead_on)
+
+mh = request.security(syminfo.tickerid, "M", high[0], barmerge.gaps_off, barmerge.lookahead_on)
+ml = request.security(syminfo.tickerid, "M", low[0], barmerge.gaps_off, barmerge.lookahead_on)
+pmh = request.security(syminfo.tickerid, "M", high[1], barmerge.gaps_off, barmerge.lookahead_on)
+pml = request.security(syminfo.tickerid, "M", low[1], barmerge.gaps_off, barmerge.lookahead_on)
+
+displayPD  = timeframe.multiplier <= maxTimeframe and timeframe.isintraday
+displayPW  = timeframe.multiplier <= maxTimeframe and timeframe.isintraday
+displayPM  = timeframe.multiplier <= maxTimeframe and timeframe.isintraday
+
 // #####################
 // # WEEKDAY SEPARATOR #
 // #####################
@@ -176,7 +218,6 @@ if dayofweek == dayofweek.sunday
 // ############
 // # SESSIONS #
 // ############
-
 sessionHLAsian = getHighLowSess(ASIAN_HOURS)
 asianOpenRangeHigh = plot(timeInRange(timeframe.period, ASIAN_HOURS) and displayRange and showSessions ? array.get(sessionHLAsian, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
 asianOpenRangeLow = plot(timeInRange(timeframe.period, ASIAN_HOURS) and displayRange and showSessions ? array.get(sessionHLAsian, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
@@ -197,38 +238,54 @@ pmOpenRangeHigh = plot(timeInRange(timeframe.period, PM_HOURS) and displayRange 
 pmOpenRangeLow = plot(timeInRange(timeframe.period, PM_HOURS) and displayRange and showSessions ? array.get(sessionPM, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
 fill(pmOpenRangeHigh, pmOpenRangeLow, color=displayRange and showSessions ? pmSessionColor : na, editable=false)
 
+// #############
+// # LIQUIDITY #
+// #############
+if showLiquidity
+    if (syminfo.type != "crypto" and dayofweek != dayofweek.sunday) or (syminfo.type == "crypto")
+        array.clear(liquidityLines)
+        array.clear(liquidityTexts)
+
+        // CLEAR ALL LINES / ALL LABELS
+        allLines = line.all
+        allLabels = label.all
+        for i = 0 to (array.size(allLines) == 0 ? na : array.size(allLines) - 1)
+            line.delete(array.get(allLines, i))
+        for i = 0 to (array.size(allLabels) == 0 ? na : array.size(allLabels) - 1)
+            label.delete(array.get(allLabels, i))
+
+        if dh < pdh and displayPD
+            updateLiquidityArrays(pdh, "PDH")
+        if wh < pwh and displayPW
+            updateLiquidityArrays(pwh, "PWH")
+        if mh < pmh and displayPM
+            updateLiquidityArrays(pmh, "PMH")
+
+        if dl > pdl and displayPD
+            updateLiquidityArrays(pdl, "PDL")
+        if wl > pwl and displayPW
+            updateLiquidityArrays(pwl, "PWL")
+        if ml > pml and displayPM
+            updateLiquidityArrays(pml, "PML")
+
+        for i = 0 to (array.size(liquidityLines) == 0 ? na : array.size(liquidityLines) - 1)
+            line.new(x1=midnightOpenTime, y1=array.get(liquidityLines, i), x2=lineEndTime, y2=array.get(liquidityLines, i), xloc=xloc.bar_time, color=color.black, style=line.style_solid, width=1)
+            label.new(x=lineEndTime, y=array.get(liquidityLines, i), xloc=xloc.bar_time, text=array.get(liquidityTexts, i), color=color.rgb(0,0,0,100), textcolor=color.rgb(0,0,0,50), style=label.style_label_left, size=size.normal)
+
 // ########
 // # OPEN #
 // ########
 // Intraday
-var openPM = 0.0
-
 var openLondon = 0.0
-var label tOpenLondon = na
-var line lOpenLondon = na
-
 var openAM = 0.0
-var label tOpenAM = na
-var line lOpenAM = na
-
-var line line0730 = na
-var line line0900 = na
-var line line1030 = na
+var openPM = 0.0
 
 // Daily
 var openMidnight   = 0.0
-var label t = na
-var line l = na
 
 // Weekly
 var weeklyOpenTime = time
 var monthlyOpenTime = time
-
-var label tWeekly = na
-var line lWeekly = na
-
-var label tMonthly = na
-var line lMonthly = na
 
 if timeMidnight
     if not timeMidnight[1]
@@ -246,7 +303,13 @@ if timeAMQ2
     if not timeAMQ2[1]
         openAM := open
     else
-        openAM := math.max(open, openAM) 
+        openAM := math.max(open, openAM)
+
+if timePMQ2
+    if not timePMQ2[1]
+        openPM := open
+    else
+        openPM := math.max(open, openPM) 
 
 if newWeek
     weeklyOpenTime := time
@@ -255,50 +318,38 @@ if newMonth
 
 if showOpens
     if (syminfo.type != "crypto" and dayofweek != dayofweek.sunday) or (syminfo.type == "crypto")
-        label.delete(t[1])
-        line.delete(l[1])
+        line.new(x1=time0730, y1=close, x2=time0730, y2=close *1.01, xloc=xloc.bar_time, color=color.rgb(0,0,0,75), style=line.style_dotted, width=1, extend = extend.both)
+        line.new(x1=time0900, y1=close, x2=time0900, y2=close *1.01, xloc=xloc.bar_time, color=color.rgb(0,0,0,75), style=line.style_dotted, width=1, extend = extend.both)
+        line.new(x1=time1030, y1=close, x2=time1030, y2=close *1.01, xloc=xloc.bar_time, color=color.rgb(0,0,0,75), style=line.style_dotted, width=1, extend = extend.both)
 
-        label.delete(tWeekly[1])
-        line.delete(lWeekly[1])
+        line.new(x1=time1330, y1=close, x2=time1330, y2=close *1.01, xloc=xloc.bar_time, color=color.rgb(0,0,0,75), style=line.style_dotted, width=1, extend = extend.both)
+        line.new(x1=time1500, y1=close, x2=time1500, y2=close *1.01, xloc=xloc.bar_time, color=color.rgb(0,0,0,75), style=line.style_dotted, width=1, extend = extend.both)
+        line.new(x1=time1630, y1=close, x2=time1630, y2=close *1.01, xloc=xloc.bar_time, color=color.rgb(0,0,0,75), style=line.style_dotted, width=1, extend = extend.both)
 
-        label.delete(tMonthly[1])
-        line.delete(lMonthly[1])
+        label.new(x=amTime, y=openLondon, xloc=xloc.bar_time, text="01:30", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="London Opening Price " + str.tostring(openLondon))
+        line.new(x1=londonOpenTime, y1=openLondon, x2=amTime, y2=openLondon, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
 
-        label.delete(tOpenLondon[1])
-        line.delete(lOpenLondon[1])
+        label.new(x=pmOpenTime, y=openAM, xloc=xloc.bar_time, text="07:30", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="AM Opening Price " + str.tostring(openAM))
+        line.new(x1=amOpenTime, y1=openAM, x2=pmOpenTime, y2=openAM, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
 
-        label.delete(tOpenAM[1])
-        line.delete(lOpenAM[1])
-
-        line.delete(line0730[1])
-        line.delete(line0900[1])
-        line.delete(line1030[1])
-
-        line0730 := line.new(x1=time0730, y1=close, x2=time0730, y2=close *1.01, xloc=xloc.bar_time, color=openColor, style=line.style_dotted, width=1, extend = extend.both)
-        line0900 := line.new(x1=time0900, y1=close, x2=time0900, y2=close *1.01, xloc=xloc.bar_time, color=openColor, style=line.style_dotted, width=1, extend = extend.both)
-        line1030 := line.new(x1=time1030, y1=close, x2=time1030, y2=close *1.01, xloc=xloc.bar_time, color=openColor, style=line.style_dotted, width=1, extend = extend.both)
-
-        tOpenLondon := label.new(x=amTime, y=openLondon, xloc=xloc.bar_time, text="01:30", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="London Opening Price " + str.tostring(openLondon))
-        lOpenLondon := line.new(x1=londonOpenTime, y1=openLondon, x2=amTime, y2=openLondon, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
-
-        tOpenAM := label.new(x=pmTime, y=openAM, xloc=xloc.bar_time, text="07:30", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="AM Opening Price " + str.tostring(openAM))
-        lOpenAM := line.new(x1=amOpenTime, y1=openAM, x2=pmTime, y2=openAM, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
+        label.new(x=asianTime, y=openPM, xloc=xloc.bar_time, text="13:30", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="PM Opening Price " + str.tostring(openPM))
+        line.new(x1=pmOpenTime, y1=openPM, x2=asianTime, y2=openPM, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
 
         if syminfo.type != "crypto" and dayofweek == dayofweek.friday
-            t := label.new(x=lineEndTime, y=openMidnight, xloc=xloc.bar_time, text="00:00", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Midnight Opening Price " + str.tostring(openMidnight))
-            l := line.new(x1=midnightOpenTime, y1=openMidnight, x2=lineEndTime, y2=openMidnight, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
+            label.new(x=lineEndTime, y=openMidnight, xloc=xloc.bar_time, text="00:00", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Midnight Opening Price " + str.tostring(openMidnight))
+            line.new(x1=midnightOpenTime, y1=openMidnight, x2=lineEndTime, y2=openMidnight, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
 
-            tWeekly := label.new(x=lineEndTime, y=openWeekly, xloc=xloc.bar_time, text="Weekly open", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Weekly Opening Price " + str.tostring(openWeekly))
-            lWeekly := line.new(x1=weeklyOpenTime-getWeeklyStartOffset(), y1=openWeekly, x2=lineEndTime, y2=openWeekly, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
+            label.new(x=lineEndTime, y=openWeekly, xloc=xloc.bar_time, text="Weekly open", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Weekly Opening Price " + str.tostring(openWeekly))
+            line.new(x1=weeklyOpenTime-getWeeklyStartOffset(), y1=openWeekly, x2=lineEndTime, y2=openWeekly, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
 
-            tMonthly := label.new(x=lineEndTime, y=openMonthly, xloc=xloc.bar_time, text="Monthly open", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Monthly Opening Price " + str.tostring(openMonthly))
-            lMonthly := line.new(x1=monthlyOpenTime, y1=openMonthly, x2=lineEndTime, y2=openMonthly, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
+            label.new(x=lineEndTime, y=openMonthly, xloc=xloc.bar_time, text="Monthly open", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Monthly Opening Price " + str.tostring(openMonthly))
+            line.new(x1=monthlyOpenTime, y1=openMonthly, x2=lineEndTime, y2=openMonthly, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
         else
-            t := label.new(x=lineEndTime, y=openMidnight, xloc=xloc.bar_time, text="00:00", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Midnight Opening Price " + str.tostring(openMidnight))
-            l := line.new(x1=midnightOpenTime, y1=openMidnight, x2=lineEndTime, y2=openMidnight, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
+            label.new(x=lineEndTime, y=openMidnight, xloc=xloc.bar_time, text="00:00", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Midnight Opening Price " + str.tostring(openMidnight))
+            line.new(x1=midnightOpenTime, y1=openMidnight, x2=lineEndTime, y2=openMidnight, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
 
-            tWeekly := label.new(x=lineEndTime, y=openWeekly, xloc=xloc.bar_time, text="Weekly open", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Weekly Opening Price " + str.tostring(openWeekly))
-            lWeekly := line.new(x1=weeklyOpenTime-getWeeklyStartOffset(), y1=openWeekly, x2=lineEndTime, y2=openWeekly, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
+            label.new(x=lineEndTime, y=openWeekly, xloc=xloc.bar_time, text="Weekly open", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Weekly Opening Price " + str.tostring(openWeekly))
+            line.new(x1=weeklyOpenTime-getWeeklyStartOffset(), y1=openWeekly, x2=lineEndTime, y2=openWeekly, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
 
-            tMonthly := label.new(x=lineEndTime, y=openMonthly, xloc=xloc.bar_time, text="Monthly open", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Monthly Opening Price " + str.tostring(openMonthly))
-            lMonthly := line.new(x1=monthlyOpenTime, y1=openMonthly, x2=lineEndTime, y2=openMonthly, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
+            label.new(x=lineEndTime, y=openMonthly, xloc=xloc.bar_time, text="Monthly open", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Monthly Opening Price " + str.tostring(openMonthly))
+            line.new(x1=monthlyOpenTime, y1=openMonthly, x2=lineEndTime, y2=openMonthly, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1)
