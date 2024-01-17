@@ -105,6 +105,8 @@ LONDON_HOURS = '0200-0500:1234567'
 AM_HOURS     = '0830-1200:1234567'
 PM_HOURS     = '1330-1600:1234567'
 
+displayRange = timeframe.multiplier <= maxTimeframe and timeframe.isintraday
+
 // MACRO
 macro0950 = timestamp("America/New_York", year, month, dayofmonth, 9, 50, 0)
 macro1050 = timestamp("America/New_York", year, month, dayofmonth, 10, 50, 0)
@@ -211,23 +213,23 @@ if dayofweek == dayofweek.sunday
 // # SESSIONS #
 // ############
 sessionHLAsian = getHighLowSess(ASIAN_HOURS)
-asianOpenRangeHigh = plot(timeInRange(timeframe.period, ASIAN_HOURS) and showSessions ? array.get(sessionHLAsian, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
-asianOpenRangeLow = plot(timeInRange(timeframe.period, ASIAN_HOURS) and showSessions ? array.get(sessionHLAsian, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+asianOpenRangeHigh = plot(timeInRange(timeframe.period, ASIAN_HOURS) and displayRange and showSessions ? array.get(sessionHLAsian, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+asianOpenRangeLow = plot(timeInRange(timeframe.period, ASIAN_HOURS) and displayRange and showSessions ? array.get(sessionHLAsian, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
 fill(asianOpenRangeHigh, asianOpenRangeLow, color=showSessions ? asianSessionColor : na, editable=false)
 
 sessionHLLondon = getHighLowSess(LONDON_HOURS)
-londonOpenRangeHigh = plot(timeInRange(timeframe.period, LONDON_HOURS) and showSessions ? array.get(sessionHLLondon, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
-londonOpenRangeLow = plot(timeInRange(timeframe.period, LONDON_HOURS) and showSessions ? array.get(sessionHLLondon, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+londonOpenRangeHigh = plot(timeInRange(timeframe.period, LONDON_HOURS) and displayRange and showSessions ? array.get(sessionHLLondon, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+londonOpenRangeLow = plot(timeInRange(timeframe.period, LONDON_HOURS) and displayRange and showSessions ? array.get(sessionHLLondon, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
 fill(londonOpenRangeHigh, londonOpenRangeLow, color=showSessions ? londonSessionColor : na, editable=false)
 
 sessionAM = getHighLowSess(AM_HOURS)
-amOpenRangeHigh = plot(timeInRange(timeframe.period, AM_HOURS) and showSessions ? array.get(sessionAM, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
-amOpenRangeLow = plot(timeInRange(timeframe.period, AM_HOURS) and showSessions ? array.get(sessionAM, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+amOpenRangeHigh = plot(timeInRange(timeframe.period, AM_HOURS) and displayRange and showSessions ? array.get(sessionAM, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+amOpenRangeLow = plot(timeInRange(timeframe.period, AM_HOURS) and displayRange and showSessions ? array.get(sessionAM, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
 fill(amOpenRangeHigh, amOpenRangeLow, color=showSessions ? amSessionColor : na, editable=false)
 
 sessionPM = getHighLowSess(PM_HOURS)
-pmOpenRangeHigh = plot(timeInRange(timeframe.period, PM_HOURS) and showSessions ? array.get(sessionPM, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
-pmOpenRangeLow = plot(timeInRange(timeframe.period, PM_HOURS) and showSessions ? array.get(sessionPM, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+pmOpenRangeHigh = plot(timeInRange(timeframe.period, PM_HOURS) and displayRange and showSessions ? array.get(sessionPM, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+pmOpenRangeLow = plot(timeInRange(timeframe.period, PM_HOURS) and displayRange and showSessions ? array.get(sessionPM, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
 fill(pmOpenRangeHigh, pmOpenRangeLow, color=showSessions ? pmSessionColor : na, editable=false)
 
 // #############
