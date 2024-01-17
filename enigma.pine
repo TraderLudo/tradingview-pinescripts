@@ -81,9 +81,6 @@ updateLiquidityArrays(price, txt) =>
 // # CONSTANTS #
 // #############
 timeMidnight      = time("1", "0000-0001:1234567", "America/New_York")
-timeLondonQ2      = time("1", "0130-0131:1234567", "America/New_York")
-timeAMQ2          = time("1", "0730-0731:1234567", "America/New_York")
-timePMQ2          = time("1", "1330-1331:1234567", "America/New_York")
 midnightOpenTime  = timestamp("America/New_York", year, month, dayofmonth, 0, 0, 0)
 londonOpenTime    = timestamp("America/New_York", year, month, dayofmonth, 1, 30, 0)
 amTime            = timestamp("America/New_York", year, month, dayofmonth, 6, 00, 0)
@@ -97,21 +94,28 @@ currentTimePlusTwoHours = currentTime + 3600 * 2 * 1000
 endOfDayTime            = timestamp("America/New_York", year, month, dayofmonth, 23, 59, 59)
 lineEndTime             = math.min(endOfDayTime, currentTimePlusTwoHours)
 
-// AM Q1,Q2,Q3,Q4
-time0600 = timestamp("America/New_York", year, month, dayofmonth, 6, 00, 0)
-time0730 = timestamp("America/New_York", year, month, dayofmonth, 7, 30, 0)
-time0900 = timestamp("America/New_York", year, month, dayofmonth, 9, 0, 0)
-time1030 = timestamp("America/New_York", year, month, dayofmonth, 10, 30, 0)
+// # Constants for Sessions
+asianSessionColor  = color.new(color.yellow, 93)
+londonSessionColor = color.new(color.aqua, 93)
+amSessionColor     = color.new(color.red, 93)
+pmSessionColor     = color.new(color.gray, 93)
 
-// PM Q2,Q3,Q4
-time1330 = timestamp("America/New_York", year, month, dayofmonth, 13, 30, 0)
-time1500 = timestamp("America/New_York", year, month, dayofmonth, 15, 00, 0)
-time1630 = timestamp("America/New_York", year, month, dayofmonth, 16, 30, 0)
+ASIAN_HOURS  = '1800-0000:1234567'
+LONDON_HOURS = '0200-0500:1234567'
+AM_HOURS     = '0830-1200:1234567'
+PM_HOURS     = '1330-1600:1234567'
+
+// MACRO
+macro0950 = timestamp("America/New_York", year, month, dayofmonth, 9, 50, 0)
+macro1050 = timestamp("America/New_York", year, month, dayofmonth, 10, 50, 0)
+macro1150 = timestamp("America/New_York", year, month, dayofmonth, 10, 50, 0)
+
+// Silver bullet
+silverBullet1000 = timestamp("America/New_York", year, month, dayofmonth, 10, 00, 0)
 
 newDay            = ta.change(dayofweek)
 newWeek           = ta.change(weekofyear)
 newMonth          = ta.change(time("M"))
-newAMQ2           = ta.change(timeAMQ2)
 
 colorWhiteTransparent = color.new(color.white, 100)
 
@@ -142,19 +146,6 @@ isWeekBefore      = (year(timenow) == year(time) and weekofyear(timenow) == week
 displaySeparators = showWeekdaySeparator and timeframe.multiplier <= maxTimeframe and timeframe.isintraday and newDay and dayofweek != dayofweek.sunday and (isWeekBefore or isCurrentWeek)
 
 displayDayTxt     = showWeekdaySeparator and timeframe.multiplier <= maxTimeframe and timeframe.isintraday and hour == hourToDisplayTxt and minute == 0
-
-// # Constants for Sessions
-asianSessionColor  = color.new(color.yellow, 90)
-londonSessionColor = color.new(color.aqua, 90)
-amSessionColor     = color.new(color.red, 90)
-pmSessionColor     = color.new(color.gray, 90)
-
-ASIAN_HOURS  = '1800-0000:1234567'
-LONDON_HOURS = '0000-0600:1234567'
-AM_HOURS     = '0600-1200:1234567'
-PM_HOURS     = '1200-1800:1234567'
-
-displayRange = timeframe.multiplier <= maxTimeframe and timeframe.isintraday
 
 // # Constants for Opens
 openWeekly  = request.security(syminfo.tickerid, "W", open, lookahead = barmerge.lookahead_on)
@@ -191,11 +182,11 @@ if displaySeparators
     drawVerticalLine(midnightOpenTime, colorSeparators, styleSeparators, 1)
 
 // LONG DAY NAME
-plotchar(displayDayTxt and dayofweek == dayofweek.monday and (isWeekBefore or isCurrentWeek), offset=0, char=" ", text=txtMonday, color=colorText, location=positionDaysOfWeek, textcolor=colorText, editable=false, display=display.all - display.status_line)
-plotchar(displayDayTxt and dayofweek == dayofweek.tuesday and (isWeekBefore or isCurrentWeek), offset=0, char=" ", text=txtTuesday, color=colorText, location=positionDaysOfWeek, textcolor=colorText, editable=false, display=display.all - display.status_line)
-plotchar(displayDayTxt and dayofweek == dayofweek.wednesday and (isWeekBefore or isCurrentWeek), offset=0, char=" ", text=txtWednesday, color=colorText, location=positionDaysOfWeek, textcolor=colorText, editable=false, display=display.all - display.status_line)
-plotchar(displayDayTxt and dayofweek == dayofweek.thursday and (isWeekBefore or isCurrentWeek), offset=0, char=" ", text=txtThursday, color=colorText, location=positionDaysOfWeek, textcolor=colorText, editable=false, display=display.all - display.status_line)
-plotchar(displayDayTxt and dayofweek == dayofweek.friday and (isWeekBefore or isCurrentWeek), offset=0, char=" ", text=txtFriday, color=colorText, location=positionDaysOfWeek, textcolor=colorText, editable=false, display=display.all - display.status_line)
+plotchar(displayDayTxt and dayofweek == dayofweek.monday and (isWeekBefore or isCurrentWeek), offset=0, char=" ", text=txtMonday, color=colorText, location=positionDaysOfWeek, textcolor=colorText, editable=false, display=display.all - display.status_line)
+plotchar(displayDayTxt and dayofweek == dayofweek.tuesday and (isWeekBefore or isCurrentWeek), offset=0, char=" ", text=txtTuesday, color=colorText, location=positionDaysOfWeek, textcolor=colorText, editable=false, display=display.all - display.status_line)
+plotchar(displayDayTxt and dayofweek == dayofweek.wednesday and (isWeekBefore or isCurrentWeek), offset=0, char=" ", text=txtWednesday, color=colorText, location=positionDaysOfWeek, textcolor=colorText, editable=false, display=display.all - display.status_line)
+plotchar(displayDayTxt and dayofweek == dayofweek.thursday and (isWeekBefore or isCurrentWeek), offset=0, char=" ", text=txtThursday, color=colorText, location=positionDaysOfWeek, textcolor=colorText, editable=false, display=display.all - display.status_line)
+plotchar(displayDayTxt and dayofweek == dayofweek.friday and (isWeekBefore or isCurrentWeek), offset=0, char=" ", text=txtFriday, color=colorText, location=positionDaysOfWeek, textcolor=colorText, editable=false, display=display.all - display.status_line)
 
 var int dayCount = 0
 if dayofweek == dayofweek.monday
@@ -220,24 +211,24 @@ if dayofweek == dayofweek.sunday
 // # SESSIONS #
 // ############
 sessionHLAsian = getHighLowSess(ASIAN_HOURS)
-asianOpenRangeHigh = plot(timeInRange(timeframe.period, ASIAN_HOURS) and displayRange and showSessions ? array.get(sessionHLAsian, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
-asianOpenRangeLow = plot(timeInRange(timeframe.period, ASIAN_HOURS) and displayRange and showSessions ? array.get(sessionHLAsian, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
-fill(asianOpenRangeHigh, asianOpenRangeLow, color=displayRange and showSessions ? asianSessionColor : na, editable=false)
+asianOpenRangeHigh = plot(timeInRange(timeframe.period, ASIAN_HOURS) and showSessions ? array.get(sessionHLAsian, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+asianOpenRangeLow = plot(timeInRange(timeframe.period, ASIAN_HOURS) and showSessions ? array.get(sessionHLAsian, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+fill(asianOpenRangeHigh, asianOpenRangeLow, color=showSessions ? asianSessionColor : na, editable=false)
 
 sessionHLLondon = getHighLowSess(LONDON_HOURS)
-londonOpenRangeHigh = plot(timeInRange(timeframe.period, LONDON_HOURS) and displayRange and showSessions ? array.get(sessionHLLondon, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
-londonOpenRangeLow = plot(timeInRange(timeframe.period, LONDON_HOURS) and displayRange and showSessions ? array.get(sessionHLLondon, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
-fill(londonOpenRangeHigh, londonOpenRangeLow, color=displayRange and showSessions ? londonSessionColor : na, editable=false)
+londonOpenRangeHigh = plot(timeInRange(timeframe.period, LONDON_HOURS) and showSessions ? array.get(sessionHLLondon, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+londonOpenRangeLow = plot(timeInRange(timeframe.period, LONDON_HOURS) and showSessions ? array.get(sessionHLLondon, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+fill(londonOpenRangeHigh, londonOpenRangeLow, color=showSessions ? londonSessionColor : na, editable=false)
 
 sessionAM = getHighLowSess(AM_HOURS)
-amOpenRangeHigh = plot(timeInRange(timeframe.period, AM_HOURS) and displayRange and showSessions ? array.get(sessionAM, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
-amOpenRangeLow = plot(timeInRange(timeframe.period, AM_HOURS) and displayRange and showSessions ? array.get(sessionAM, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
-fill(amOpenRangeHigh, amOpenRangeLow, color=displayRange and showSessions ? amSessionColor : na, editable=false)
+amOpenRangeHigh = plot(timeInRange(timeframe.period, AM_HOURS) and showSessions ? array.get(sessionAM, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+amOpenRangeLow = plot(timeInRange(timeframe.period, AM_HOURS) and showSessions ? array.get(sessionAM, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+fill(amOpenRangeHigh, amOpenRangeLow, color=showSessions ? amSessionColor : na, editable=false)
 
 sessionPM = getHighLowSess(PM_HOURS)
-pmOpenRangeHigh = plot(timeInRange(timeframe.period, PM_HOURS) and displayRange and showSessions ? array.get(sessionPM, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
-pmOpenRangeLow = plot(timeInRange(timeframe.period, PM_HOURS) and displayRange and showSessions ? array.get(sessionPM, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
-fill(pmOpenRangeHigh, pmOpenRangeLow, color=displayRange and showSessions ? pmSessionColor : na, editable=false)
+pmOpenRangeHigh = plot(timeInRange(timeframe.period, PM_HOURS) and showSessions ? array.get(sessionPM, 0) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+pmOpenRangeLow = plot(timeInRange(timeframe.period, PM_HOURS) and showSessions ? array.get(sessionPM, 1) : na, color=colorWhiteTransparent, style=plot.style_line, linewidth=0, show_last=5, editable=false, display=display.none)
+fill(pmOpenRangeHigh, pmOpenRangeLow, color=showSessions ? pmSessionColor : na, editable=false)
 
 // #############
 // # LIQUIDITY #
@@ -283,11 +274,6 @@ if showLiquidity
 // ########
 // # OPEN #
 // ########
-// Intraday
-var openLondon = 0.0
-var openAM = 0.0
-var openPM = 0.0
-
 // Daily
 var openMidnight   = 0.0
 
@@ -295,33 +281,15 @@ var openMidnight   = 0.0
 var weeklyOpenTime = time
 var monthlyOpenTime = time
 
-if timeMidnight
-    if not timeMidnight[1]
+if bool(timeMidnight)
+    if not bool(timeMidnight[1])
         openMidnight  := open
     else
         openMidnight := math.max(open, openMidnight)
 
-if timeLondonQ2
-    if not timeLondonQ2[1]
-        openLondon := open
-    else
-        openLondon := math.max(open, openLondon)
-
-if timeAMQ2
-    if not timeAMQ2[1]
-        openAM := open
-    else
-        openAM := math.max(open, openAM)
-
-if timePMQ2
-    if not timePMQ2[1]
-        openPM := open
-    else
-        openPM := math.max(open, openPM) 
-
-if newWeek
+if bool(newWeek)
     weeklyOpenTime := time
-if newMonth
+if bool(newMonth)
     monthlyOpenTime := time
 
 if showOpens
@@ -340,24 +308,6 @@ if showOpens
     array.clear(labels)
 
     if (syminfo.type != "crypto" and dayofweek != dayofweek.sunday) or (syminfo.type == "crypto")
-        if timeframe.multiplier <= maxTimeframe and timeframe.isintraday
-            lines.push(line.new(x1=time0730, y1=close, x2=time0730, y2=close *1.01, xloc=xloc.bar_time, color=color.rgb(0,0,0,75), style=line.style_dotted, width=1, extend = extend.both))
-            lines.push(line.new(x1=time0900, y1=close, x2=time0900, y2=close *1.01, xloc=xloc.bar_time, color=color.rgb(0,0,0,75), style=line.style_dotted, width=1, extend = extend.both))
-            lines.push(line.new(x1=time1030, y1=close, x2=time1030, y2=close *1.01, xloc=xloc.bar_time, color=color.rgb(0,0,0,75), style=line.style_dotted, width=1, extend = extend.both))
-
-            lines.push(line.new(x1=time1330, y1=close, x2=time1330, y2=close *1.01, xloc=xloc.bar_time, color=color.rgb(0,0,0,75), style=line.style_dotted, width=1, extend = extend.both))
-            lines.push(line.new(x1=time1500, y1=close, x2=time1500, y2=close *1.01, xloc=xloc.bar_time, color=color.rgb(0,0,0,75), style=line.style_dotted, width=1, extend = extend.both))
-            lines.push(line.new(x1=time1630, y1=close, x2=time1630, y2=close *1.01, xloc=xloc.bar_time, color=color.rgb(0,0,0,75), style=line.style_dotted, width=1, extend = extend.both))
-
-            labels.push(label.new(x=amTime, y=openLondon, xloc=xloc.bar_time, text="01:30", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="London Opening Price " + str.tostring(openLondon)))
-            lines.push(line.new(x1=londonOpenTime, y1=openLondon, x2=amTime, y2=openLondon, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1))
-
-            labels.push(label.new(x=pmOpenTime, y=openAM, xloc=xloc.bar_time, text="07:30", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="AM Opening Price " + str.tostring(openAM)))
-            lines.push(line.new(x1=amOpenTime, y1=openAM, x2=pmOpenTime, y2=openAM, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1))
-
-            labels.push(label.new(x=asianTime, y=openPM, xloc=xloc.bar_time, text="13:30", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="PM Opening Price " + str.tostring(openPM)))
-            lines.push(line.new(x1=pmOpenTime, y1=openPM, x2=asianTime, y2=openPM, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1))
-
         if syminfo.type != "crypto" and dayofweek == dayofweek.friday
             labels.push(label.new(x=lineEndTime, y=openMidnight, xloc=xloc.bar_time, text="00:00", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Midnight Opening Price " + str.tostring(openMidnight)))
             lines.push(line.new(x1=midnightOpenTime, y1=openMidnight, x2=lineEndTime, y2=openMidnight, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1))
@@ -376,4 +326,3 @@ if showOpens
 
             labels.push(label.new(x=lineEndTime, y=openMonthly, xloc=xloc.bar_time, text="Monthly open", color=color.rgb(0,0,0,100), textcolor=openColor, style=label.style_label_left, size=size.normal, tooltip="Monthly Opening Price " + str.tostring(openMonthly)))
             lines.push(line.new(x1=monthlyOpenTime, y1=openMonthly, x2=lineEndTime, y2=openMonthly, xloc=xloc.bar_time, color=openColor, style=openLineStyle, width=1))
-
